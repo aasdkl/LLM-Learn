@@ -7,11 +7,7 @@ import json
 from numpy import dot
 import chromadb
 from file_handler import FileHandler
-from langchain_text_splitters import RecursiveCharacterTextSplitter
-from langchain_community.document_loaders import TextLoader
 
-# 1. collection.add
-# 2. collection.query
 class VectorDBHandler:
     def __init__(self, file_name, db_name):
         self.db = chromadb.PersistentClient(path=os.path.dirname(__file__),)
@@ -35,10 +31,7 @@ class VectorDBHandler:
         if not self.collection.get()['ids']:
             print('[reading file...]')
             # 1. 读取
-            article = TextLoader(
-                file_path=self.file_path,
-                encoding='utf-8'
-            ).load()[0].page_content
+            article = FileHandler.read_file(self.file_path)
 
             # 2. 分割
             processed_sentences = FileHandler.demo_splitter(article)

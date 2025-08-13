@@ -10,7 +10,7 @@ from langchain_community.document_loaders import TextLoader
     分割:   RecursiveCharacterTextSplitter.split_text
     # 向量化: ai_client.embeddings.create
 
-    collection = chromadb.get_or_create_collection("db_name")
+    collection = chromadb.Client().get_or_create_collection("db_name")
     collection.add(embeddings, documents, ids) # 三个 List 顺序一一对应
 
 查询：匹配 -> 查询

@@ -1,5 +1,6 @@
 import os
 from openai import OpenAI
+from sentence_transformers import SentenceTransformer
 import chromadb
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_community.document_loaders import TextLoader
@@ -8,16 +9,15 @@ from langchain_community.document_loaders import TextLoader
 准备：读取 -> 分割 -> 向量化 -> 存储
     读取:   TextLoader/WebBaseLoader... .load()[0].page_content
     分割:   RecursiveCharacterTextSplitter.split_text
-    # 向量化: ai_client.embeddings.create
-
-    collection = chromadb.Client().get_or_create_collection("db_name")
-    collection.add(embeddings, documents, ids) # 三个 List 顺序一一对应
+    向量化: ai_client.embeddings.create
+    存储:   collection = chromadb.Client().get_or_create_collection("db_name")
+            collection.add(embeddings, documents, ids) # 三个 List 顺序一一对应
 
 查询：匹配 -> 查询
     # 匹配: 余弦距离（越大越好）/欧式距离 L2（越小越好）
-    # 查询: ai_client.chat.completions.create
+    匹配: collection.query(query_embeddings, n_results=3)
+    查询: ai_client.chat.completions.create
 
-    collection.query(query_embeddings, n_results=3)
 '''
 class VectorDBHandler:
     def __init__(self, file_name, db_name):

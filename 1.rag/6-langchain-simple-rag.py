@@ -1,9 +1,11 @@
 import os
 from langchain_community.embeddings import DashScopeEmbeddings
-from langchain_community.vectorstores import Chroma
+from langchain_chroma import Chroma  # 使用更新后的包
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_community.document_loaders import TextLoader
 from langchain_openai import ChatOpenAI
+# from langchain_community.chat_models import ChatTongyi  # 专为DashScope设计的聊天模型
+from langchain_core.runnables import RunnablePassthrough
 from langchain.prompts import (
     SystemMessagePromptTemplate,
     HumanMessagePromptTemplate,
@@ -29,28 +31,41 @@ class VectorDBHandler:
     def __init__(self, file_name, db_name):
         self.db_name = db_name
         self.file_path = os.path.join(os.path.dirname(__file__), file_name)
-        self.db_dir = os.path.dirname(__file__)
+        self.db_dir = os.path.join(os.path.dirname(__file__), "chroma_db")  # 单独目录存储
         self.splitter = RecursiveCharacterTextSplitter(
             separators=["\n\n"],
             chunk_size=30,
             chunk_overlap=5
         )
-        self.embedding_func = DashScopeEmbeddings(dashscope_api_key=os.getenv('DASHSCOPE_API_KEY'))
-        self.rag_chain = self._build_rag_chain()
+        self.embedding_func = DashScopeEmbeddings(
+            dashscope_api_key=os.getenv('DASHSCOPE_API_KEY'),
+            model="text-embedding-v2")
 
     def _build_rag_chain(self):
-        llm = ChatOpenAI(
+        llm = ChatOpenAI(  # ChatTongyi
             api_key=os.getenv("DASHSCOPE_API_KEY"),
             base_url=os.getenv("DASHSCOPE_BASE_URL"),
             model='qwen-plus',
             temperature=0
         )
-        template = ChatPromptTemplate.from_messages([
-            SystemMessagePromptTemplate.from_template("我能帮你查询说明书"),
-            HumanMessagePromptTemplate.from_template('帮我查询说明书：我的问题是：{question}，下面是说明书相关的部分内容：{rag}。如果内容不相关，请大胆返回不知道')
-        ])
-        return template | llm
 
+        template = """帮我根据提供的上下文回答问题。
+        上下文内容：
+        {rag}
+
+        问题：{question}
+        如果上下文与问题无关，请回答'我不知道'。"""
+        prompt = ChatPromptTemplate.from_messages([
+            SystemMessagePromptTemplate.from_template("我能帮你查询说明书"),
+            HumanMessagePromptTemplate.from_template(template)
+        ])
+
+        # 这种写法将自动获取 rag 的内容，如果需要得到参考文档，则不使用管道第一项
+        return (
+            {"rag": self.retriever, "question": RunnablePassthrough()}
+            | prompt
+            | llm
+        )
 
     def get_embedding(self, text):
         return self.ai_client.embeddings.create(input=text, model='text-embedding-v2')
@@ -79,20 +94,17 @@ class VectorDBHandler:
             # 3. 获取向量（1536维）
             db = Chroma.from_documents(paragraphs, self.embedding_func,
                                        persist_directory=self.db_dir, collection_name=self.db_name)
-            db.persist()
             # print(f'向量数量：{len(vectors)}，向量维度：{len(vectors[0])}')
 
-        self.retriever = db.as_retriever(search_kwargs={"k": 3})
+        self.retriever = db.as_retriever(search_type="similarity", search_kwargs={"k": 3})
+        self.rag_chain = self._build_rag_chain()
 
     def ask(self, question):
-        # 4. 匹配
-        similarities = self.retriever.get_relevant_documents(question)
-        # 输出前3个
-        rag = '\n'.join([f'{i+1}. {x.page_content}' for i,x in enumerate(similarities)])
-
-        # 5. 查询
-        response = self.rag_chain.invoke({"question": question, "rag": rag})
+        # 4. 直接查询，底层进行匹配
+        response = self.rag_chain.invoke(question)
+        print(f"问题: {question}")
         print(response.content)
+        print(self.retriever.invoke(question)) # 参考文档
 
 
 if __name__ == '__main__':

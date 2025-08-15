@@ -20,7 +20,7 @@ from langchain_community.document_loaders import TextLoader
 '''
 class VectorDBHandler:
     def __init__(self, file_name, db_name):
-        db = chromadb.PersistentClient(path=os.path.dirname(__file__),)
+        db = chromadb.PersistentClient(path=os.path.join(os.path.dirname(__file__), "chroma_db"))
         self.collection = db.get_or_create_collection(db_name)
         self.file_path = os.path.join(os.path.dirname(__file__), file_name)
         self.ai_client = OpenAI(api_key=os.getenv("DASHSCOPE_API_KEY"), base_url=os.getenv("DASHSCOPE_BASE_URL"))
@@ -74,6 +74,7 @@ class VectorDBHandler:
             # 0.1-0.6之间，回复会更贴切与实际情况，0.6-0.9之间，中间值，<2.0，回复的内容更具有随机性，创造性
             temperature=0
         )
+        print(f"问题: {question}")
         print(response.choices[0].message.content)
 
 

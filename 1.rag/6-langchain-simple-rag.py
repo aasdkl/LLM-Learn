@@ -14,17 +14,13 @@ from langchain.prompts import (
 
 '''
 准备：读取 -> 分割 -> 向量化 -> 存储
-    （不变）
     读取:   TextLoader/WebBaseLoader... .load()[0].page_content
     分割:   RecursiveCharacterTextSplitter.split_text
-    向量化: ai_client.embeddings.create
-    存储:   collection = chromadb.Client().get_or_create_collection("db_name")
-            collection.add(embeddings, documents, ids) # 三个 List 顺序一一对应
+    向量化、存储:   Chroma.from_documents
 
 查询：匹配 -> 查询
-    # 匹配: 余弦距离（越大越好）/欧式距离 L2（越小越好）
-    匹配: collection.query(query_embeddings, n_results=3)
-    查询: ai_client.chat.completions.create
+    匹配:   通过获取 retriever，调用 .invoke()
+    查询:   prompt|llm 管道进行 .invoke()，可以和匹配合并使用
 
 '''
 class VectorDBHandler:

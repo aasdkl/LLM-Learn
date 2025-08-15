@@ -1,6 +1,5 @@
 import os
 from openai import OpenAI
-from sentence_transformers import SentenceTransformer
 import chromadb
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_community.document_loaders import TextLoader
@@ -33,15 +32,6 @@ class VectorDBHandler:
 
     def get_embedding(self, text):
         return self.ai_client.embeddings.create(input=text, model='text-embedding-v2')
-
-    def search(self, query):
-        '''检索向量数据库'''
-        # 把我们查询的问题向量化, 在chroma当中进行查询
-        results = self.collection.query(
-            query_embeddings=self.get_embeddings([query]),
-            n_results=3,
-        )
-        return results
 
     def prepare(self):
         if not self.collection.get()['ids']:

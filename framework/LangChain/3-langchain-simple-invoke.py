@@ -51,13 +51,8 @@ def chain_demo():
     # SQL 链，将自然语言转换成数据库的SQL查询
 
     # 连接 MySQL 数据库
-    db_user = "root"
-    db_password = "root"
-    db_host = "127.0.0.1"
-    db_port = "3306"
-    db_name = "test"
-    db = SQLDatabase.from_uri(f"mysql+pymysql://{db_user}:{db_password}@{db_host}:{db_port}/{db_name}")
-
+    uri = f"postgresql+psycopg2://kabAdmin:P%40ssw0rd!@kintonetooldb.postgres.database.azure.com/dev_v2"
+    db = SQLDatabase.from_uri(uri)
     chain = create_sql_query_chain(llm=llm, db=db)
     # print(chain.get_prompts()[0].pretty_print())
 

@@ -1,7 +1,7 @@
 import os
 from openai import OpenAI
 import chromadb
-from langchain_text_splitters import RecursiveCharacterTextSplitter
+from langchain_text_splitters import RecursiveCharacterTextSplitter # langchain
 from langchain_community.document_loaders import TextLoader
 
 '''

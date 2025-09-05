@@ -3,9 +3,11 @@ from langchain_community.embeddings import DashScopeEmbeddings
 from langchain_chroma import Chroma  # 使用更新后的包
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_community.document_loaders import TextLoader
+from langchain_core.output_parsers import StrOutputParser
 from langchain_openai import ChatOpenAI
 # from langchain_community.chat_models import ChatTongyi  # 专为DashScope设计的聊天模型
 from langchain_core.runnables import RunnablePassthrough
+from langchain_huggingface import HuggingFaceEmbeddings
 from langchain.prompts import (
     SystemMessagePromptTemplate,
     HumanMessagePromptTemplate,
@@ -13,13 +15,19 @@ from langchain.prompts import (
 )
 
 '''
+还是基于前面的代码，用上了：
+- langchain 的 Chroma，自动对切分好的文档进行向量化
+- langchain 的管道，自动查询匹配
+
+---
+
 准备：读取 -> 分割 -> 向量化 -> 存储
     读取:   TextLoader/WebBaseLoader... .load()[0].page_content
     分割:   RecursiveCharacterTextSplitter.split_text
     向量化、存储:   Chroma.from_documents
 
 查询：匹配 -> 查询
-    匹配:   通过获取 retriever，调用 .invoke()
+    匹配:   db.as_retriever，由 Chroma 匹配
     查询:   prompt|llm 管道进行 .invoke()，可以和匹配合并使用
 
 '''
@@ -35,7 +43,8 @@ class VectorDBHandler:
         )
         self.embedding_func = DashScopeEmbeddings(
             dashscope_api_key=os.getenv('DASHSCOPE_API_KEY'),
-            model="text-embedding-v2")
+            model="text-embedding-v1")
+        # self.embedding_func = HuggingFaceEmbeddings(model_name=r'C:\dev\llm\local-model\bge-large-zh-v1.5')
 
     def _build_rag_chain(self):
         llm = ChatOpenAI(  # ChatTongyi
@@ -61,10 +70,8 @@ class VectorDBHandler:
             {"rag": self.retriever, "question": RunnablePassthrough()}
             | prompt
             | llm
+            | StrOutputParser() # 解析提取出 response.content
         )
-
-    def get_embedding(self, text):
-        return self.ai_client.embeddings.create(input=text, model='text-embedding-v2')
 
     def prepare(self):
         db = Chroma(
@@ -87,7 +94,7 @@ class VectorDBHandler:
             # for i, sentence in enumerate(processed_sentences):
             #     print(f'【{i+1}】 {sentence}')
 
-            # 3. 获取向量（1536维）
+            # 3. 获取向量（qwen 1536维， 本地 1024）
             db = Chroma.from_documents(paragraphs, self.embedding_func,
                                        persist_directory=self.db_dir, collection_name=self.db_name)
             # print(f'向量数量：{len(vectors)}，向量维度：{len(vectors[0])}')
@@ -99,7 +106,7 @@ class VectorDBHandler:
         # 4. 直接查询，底层进行匹配
         response = self.rag_chain.invoke(question)
         print(f"问题: {question}")
-        print(response.content)
+        print(response)
         print(self.retriever.invoke(question)) # 参考文档
 
 

@@ -5,6 +5,15 @@ from langchain_community.utilities import SQLDatabase
 from langchain.chains import create_sql_query_chain
 from langchain_community.tools import QuerySQLDatabaseTool
 import os
+'''
+调用 chain 的方式
+1. invoke：chain.invoke(字典)
+2. batch： 一次调用多个不同的参数组 chain.batch(字典[])
+
+其他的 LLMChain
+1. 数学链：使用数学库 numexpr 计算
+2. SQL 链：create_sql_query_chain
+'''
 
 llm = ChatOpenAI(api_key=os.getenv("DASHSCOPE_API_KEY"),
                  base_url=os.getenv("DASHSCOPE_BASE_URL"),
@@ -17,21 +26,35 @@ def invoke_demo():
     chain = prompt | llm
     # 管道形成了一个RunnableSequence。这实际上相当于一个简单的链，用于替代 LLMChain
 
-
+    '''
+    =============================================================================================
+    1. invoke 输入为字典格式
+    =============================================================================================
+    '''
     # 【invoke】 输入为字典格式
     result = chain.invoke({"number": "3"})
     print(f"【invoke】: {result.content}")
 
 
 
+    '''
+    =============================================================================================
+    2. batch 输入为字典[]
+    =============================================================================================
+    '''
     # 【batch】
     input_list = [{"number": "3"}, {"number": "10"}]
-    result = chain.batch(input_list)
+    result = chain.batch(input_list, {"max_concurrency": 5})
     print(f"【batch1】: {result[0].content}")
     print(f"【batch2】: {result[1].content}")
 
 
 
+    '''
+    =============================================================================================
+    3. predict(废弃)
+    =============================================================================================
+    '''
     # 【predict】 指定关键字参数，不能直接用在链上（较旧的 API，可能被弃用）
     from langchain.chains.llm import LLMChain
     chain_old = LLMChain(llm=llm, prompt=prompt)
@@ -41,15 +64,22 @@ def invoke_demo():
 def chain_demo():
     # 基本的 LLMChain 被管道符代替
 
-    # 数学链，转换为可以使用 Python 的 numexpr 库执行的表达式
+    '''
+    =============================================================================================
+    1. 数学链，转换为可以使用 Python 的 numexpr 库执行的表达式
+    =============================================================================================
+    '''
     llm_math = LLMMathChain.from_llm(llm)
     res = llm_math.invoke("5 ** 3 + 100 / 2的结果是多少？")
     print(res)
 
 
 
-    # SQL 链，将自然语言转换成数据库的SQL查询
-
+    '''
+    =============================================================================================
+    2. SQL 链，将自然语言转换成数据库的SQL查询
+    =============================================================================================
+    '''
     # 连接 MySQL 数据库
     uri = f"postgresql+psycopg2://kabAdmin:P%40ssw0rd!@kintonetooldb.postgres.database.azure.com/dev_v2"
     db = SQLDatabase.from_uri(uri)

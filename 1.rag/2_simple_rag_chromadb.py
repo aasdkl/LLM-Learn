@@ -31,7 +31,7 @@ class VectorDBHandler:
         )
 
     def get_embedding(self, text):
-        return self.ai_client.embeddings.create(input=text, model='text-embedding-v2')
+        return self.ai_client.embeddings.create(input=text, model='text-embedding-v1')
 
     def prepare(self):
         if not self.collection.get()['ids']:

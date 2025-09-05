@@ -6,6 +6,11 @@ from langchain.schema import (
     SystemMessage  # 等价于OpenAI接口中的 system role    系统级指令或背景设定
 )
 '''
+调用 LLM 的方式
+1. 静态方式：llm 直接 invoke()
+2. 模板方式：ChatPromptTemplate.from_messages
+3. 限制上下文记忆：ConversationBufferWindowMemory
+
 基本调用方式：
     llm.invoke()
 
@@ -13,12 +18,20 @@ from langchain.schema import (
     chain.invoke()
 '''
 
-llm = ChatOpenAI(api_key=os.getenv("DASHSCOPE_API_KEY"),
-                 base_url=os.getenv("DASHSCOPE_BASE_URL"),
-                 model_name="qwen-turbo",
+llm = ChatOpenAI(
+                # api_key=os.getenv("DASHSCOPE_API_KEY"),
+                #  base_url=os.getenv("DASHSCOPE_BASE_URL"),
+                #  model_name="qwen-turbo",
+                api_key="1",
+                 base_url=os.getenv("LOCAL_BASE_URL"),
+                 model_name="qwen3:1.7b",
                  temperature=1.5)
 
-''' 1. 静态方式 '''
+'''
+=============================================================================================
+ 1. 静态方式
+=============================================================================================
+'''
 # response = llm.invoke("什么是大模型？") # 直接提供问题，一轮回答
 messages = [
     SystemMessage(content="你是各位老师的个人助理。你叫小戈"),
@@ -32,7 +45,11 @@ print("=" * 100)
 
 
 
-'''2. 模板方式 ChatPromptTemplate（批量处理相似任务，底层依然是使用三类 Message）'''
+'''
+=============================================================================================
+2. 模板方式 ChatPromptTemplate（批量处理相似任务，底层依然是使用三类 Message）
+=============================================================================================
+'''
 # 1. LLM提示模板 PromptTemplate：常用的String提示模板
 # 2. 聊天提示模板 ChatPromptTemplate： 常用的Chat提示模板，用于组合各种角色的消息模板，传入聊天模型。消息模板包括：ChatMessagePromptTemplate、HumanMessagePromptTemplate、AIlMessagePromptTemplate、SystemMessagePromptTemplate等
 # 3. 样本提示模板 FewShotPromptTemplate：通过示例来教模型如何回答
@@ -59,7 +76,7 @@ from langchain.prompts import (
 doc_template = ChatPromptTemplate.from_messages([
     # 可以嵌套使用 SystemMessagePromptTemplate/HumanMessagePromptTemplate，也可以直接传元组
     SystemMessagePromptTemplate.from_template("作为{language}技术专家，使用{style}风格，一句话简短回答"),
-    # 底层使用 prompt.format('xxx') 的方式
+    # 底层使用 py 的 str.format('xxx') 的方式
     ("user", "提问：\n{question}")
 ])
 
@@ -70,7 +87,11 @@ print("=" * 100)
 
 
 
-'''3. 限制上下文记忆'''
+'''
+=============================================================================================
+3. 限制上下文记忆 ConversationBufferWindowMemory
+=============================================================================================
+'''
 from langchain_core.prompts import MessagesPlaceholder
 from langchain.memory import ConversationBufferWindowMemory
 
@@ -94,7 +115,12 @@ input_dict = {
     "chat_history": memory.load_memory_variables({})["chat_history"]
 }
 
-# final_prompt = prompt.format_messages(**input_dict) # 只是输出 prompt，和实际使用 chain.invoke 的时候一致
+
+# 传统方式，format_messages 得到的是 prompt
+# input = prompt.format_messages(user_input="你刚刚推荐的东西里面有辣的吗", chat_history=memory.load_memory_variables({})["chat_history"])
+# input = prompt.format_messages(**input_dict)
+# response = llm.invoke(input)
+# 使用 | 链式调用替代
 chain = prompt | llm
 response = chain.invoke(input_dict)
 print(f'【3.限制上下文记忆】：{response.content}')

@@ -33,7 +33,7 @@ class FileVectorHandler:
         self.ai_client = OpenAI(api_key=os.getenv("DASHSCOPE_API_KEY"), base_url=os.getenv("DASHSCOPE_BASE_URL"))
 
     def get_embedding(self, text):
-        return self.ai_client.embeddings.create(input=text, model='text-embedding-v2')
+        return self.ai_client.embeddings.create(input=text, model='text-embedding-v1')
 
     def prepare(self):
         self.db = FileHandler.read_file(self.db_path, from_json=True)
